@@ -1,0 +1,51 @@
+name: Release Images
+
+on:
+  push:
+    tags:
+      - "*/v*" # matches bpy/v1.0.0 etc.
+               # use git tag bpy/v1.0.0
+               # git push origin bpy/v1.0.0
+  workflow_dispatch:
+    inputs:
+      image_name:
+        description: "Image to build (e.g. bpy)"
+        required: true
+        type: string
+      tag:
+        description: "Tag to push (e.g. 1.2.3)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  parse-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      image_name: ${{ steps.parse.outputs.image_name }}
+      tag: ${{ steps.parse.outputs.tag }}
+    steps:
+      - name: Parse tag or inputs
+        id: parse
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            REF="${{ github.ref_name }}"            # e.g. bpy/v1.2.3
+            IMAGE="${REF%%/*}"                       # bpy
+            TAG="${REF##*/v}"                        # 1.2.3
+          else
+            IMAGE="${{ inputs.image_name }}"
+            TAG="${{ inputs.tag }}"
+          fi
+          echo "image_name=$IMAGE" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+  build:
+    needs: parse-tag
+    uses: ./.github/workflows/build-image.yml
+    secrets: inherit
+    with:
+      image_name: ${{ needs.parse-tag.outputs.image_name }}
+      tag: ${{ needs.parse-tag.outputs.tag }}

@@ -1,0 +1,74 @@
+runner-images
+=============
+
+Docker images used as CI runner environments on projects.blender.org (Gitea Actions).
+
+Images are hosted at ghcr.io/blender/runner-images/<name>:<version>
+
+
+Available Images
+----------------
+
+  bpy       Ubuntu base with Blender/bpy runtime dependencies
+
+
+Versioning
+----------
+
+Images are tagged per-image using git tags in the form:
+
+  <image>/v<version>    e.g.  bpy/v1.0.0
+
+Pushing such a tag triggers a build and publishes:
+
+  ghcr.io/blender/runner-images/bpy:1.0.0
+  ghcr.io/blender/runner-images/bpy:latest
+
+To release a new version:
+
+  git tag bpy/v1.0.0
+  git push origin bpy/v1.0.0
+
+You can also trigger a build manually via the GitHub Actions UI
+(Actions > Release Images > Run workflow).
+
+
+Adding a New Image
+------------------
+
+Create a Dockerfile at images/<name>/Dockerfile. That's it.
+The existing workflows will pick it up automatically.
+
+
+Usage in a Runner
+-----------------
+
+Register a Gitea Actions runner with the image as a label:
+
+  GITEA_RUNNER_LABELS: 'bpy-latest:docker://ghcr.io/blender/runner-images/bpy:1.0.0'
+
+Example docker-compose service:
+
+  services:
+    gitea_act_runner:
+      image: ghcr.io/vegardit/gitea-act-runner:dind-latest
+      restart: always
+      privileged: true
+      volumes:
+        - gitea_runner_data:/data:rw
+      environment:
+        TZ: Europe/Berlin
+        GITEA_INSTANCE_URL: https://projects.blender.org
+        GITEA_RUNNER_REGISTRATION_TOKEN: <token from repo settings>
+        GITEA_RUNNER_LABELS: bpy-latest:docker://ghcr.io/blender/runner-images/bpy:1.0.0
+  volumes:
+    gitea_runner_data:
+
+Tokens can be generated at:
+  https://projects.blender.org/<org-or-user>/<repo>/settings/actions/runners
+
+
+Using the Image in a Workflow
+-----------------------------
+
+  runs-on: bpy-latest
